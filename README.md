@@ -86,5 +86,5 @@ Contribuições são bem-vindas! Se você tiver ideias, sugestões ou melhorias,
 
 ## **Desenvolvido por**
 
-[Leo Laerda](https://leolacerda.com.br)
+[Leo Lacerda](https://leolacerda.com.br)
 
