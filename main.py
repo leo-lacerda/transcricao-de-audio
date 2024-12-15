@@ -1,17 +1,15 @@
 import streamlit as st
 import tempfile
-import librosa
 import os
+import time
 from transcriber import transcribe_audio
 from youtube_utils import download_yt_audio
-import time
 
-# Configuração inicial da página
-st.set_page_config(
-    page_title="Transcrição de Áudio",
-    page_icon="🎧",
-    layout="centered"
-)
+# Configuração da página
+st.set_page_config(page_title="Transcrição de Áudio", page_icon="🎧")
+st.title('Transcrição de Áudio')
+st.write('Transcreva áudios de vídeos do YouTube ou de arquivos de áudio próprios')
+st.info('Web app criado no [**Streamlit**](https://streamlit.io) por [**Leo Lacerda**](https://leolacerda.com.br)', icon="🤓")
 
 # Inicialização do estado da sessão
 if "transcription" not in st.session_state:
@@ -20,77 +18,53 @@ if "audio_name" not in st.session_state:
     st.session_state["audio_name"] = None
 if "youtube_url" not in st.session_state:
     st.session_state["youtube_url"] = ""
-if "audio_context_type" not in st.session_state:
-    st.session_state["audio_context_type"] = "Geral"
-if "context_description" not in st.session_state:
-    st.session_state["context_description"] = ""
-if "download_status" not in st.session_state:
-    st.session_state["download_status"] = ""
-if "reset_trigger" not in st.session_state:
-    st.session_state["reset_trigger"] = False
 
-# Título e Introdução
-st.title('Transcrição de Áudio')
-st.write('Transcreva áudios de vídeos do YouTube ou de arquivos de áudio próprios')
-st.info('Web app criado no [**Streamlit**](https://streamlit.io) por [**Leo Lacerda**](https://leolacerda.com.br)', icon="🤓")
-
-# Modelo único definido
-whisper_model = "base"
-
-# Reset dos inputs caso seja necessário
-if st.session_state.get("reset_trigger", False):
-    st.session_state["audio_context_type"] = "Geral"
-    st.session_state["context_description"] = ""
-
-# Seleção do tipo de áudio
-st.write("#### Sobre o áudio")
+# Seção: Informações sobre o áudio
+st.write("### Sobre o áudio")
 audio_context_type = st.selectbox(
     "Qual o tipo de áudio?",
-    ["Geral", "Entrevista", "Aula ou palestra"],
-    index=["Geral", "Entrevista", "Aula ou palestra"].index(st.session_state.get("audio_context_type", "Geral")),
+    ["Geral", "Entrevista", "Música", "Aula ou palestra"],
     key="audio_context_type",
-    help="Selecione o tipo do áudio para fornecer ao sistema mais contexto, o que pode melhorar a precisão da transcrição."
+    help="Selecione o tipo do áudio para fornecer ao sistema mais contexto."
 )
 
-# Entrada para descrição opcional do contexto
 context_description = st.text_area(
     "Descreva o contexto do áudio (opcional):",
-    value=st.session_state.get("context_description", ""),
     height=80,
     key="context_description",
-    help="Se possível, forneça mais detalhes sobre o áudio. Isso pode ajudar o sistema a gerar uma transcrição mais precisa."
+    help="Forneça mais detalhes, como nomes de pessoas ou temas, para ajudar a melhorar a transcrição."
 )
 
-# Gera o prompt final
+# Língua do áudio
+language = st.selectbox(
+    "Língua do áudio:",
+    ["Inglês (Geral)", "Inglês (US)", "Inglês (UK)", 
+     "Português (BR)", "Português (PT)", "Espanhol (ES)", 
+     "Espanhol (América Latina)", "Francês", "Alemão"],
+    help="Selecione a língua predominante no áudio para melhorar a transcrição."
+)
+
+# Prompt inicial
 default_prompts = {
     "Geral": "Este é um áudio geral.",
     "Entrevista": "Este é um áudio de uma entrevista entre duas ou mais pessoas.",
+    "Música": "Este é um áudio de uma música. A transcrição deve focar nas letras.",
     "Aula ou palestra": "Este é um áudio de uma aula ou palestra.",
 }
-initial_prompt = default_prompts.get(audio_context_type, "Este é um áudio geral.")  # Evita KeyError
+initial_prompt = f"{default_prompts[audio_context_type]} Língua selecionada: {language}."
 if context_description:
     initial_prompt += f" {context_description}"
 
-# Origem do áudio
-st.write("#### Escolha a origem do áudio")
+# Escolha da origem do áudio
+st.write("### Escolha a origem do áudio")
 audio_source = st.radio("", ["YouTube", "Arquivo Próprio"])
 
-audio_path = None
-
-# Função para obter a duração do áudio
-def get_audio_duration(file_path):
-    try:
-        duration = librosa.get_duration(path=file_path)
-        minutes = int(duration // 60)
-        seconds = int(duration % 60)
-        return minutes, seconds
-    except Exception as e:
-        st.error(f"Erro ao calcular a duração do áudio: {e}")
-        return 0, 0
-
-# Upload do arquivo próprio
+# Transcrição de arquivos próprios
 if audio_source == "Arquivo Próprio":
     audio_file = st.file_uploader("Faça o upload do arquivo", type=["mp3", "wav", "m4a"])
+    st.warning(
+        "⚠️ A qualidade do áudio influencia a precisão da transcrição. Áudios de baixa qualidade podem ter erros."
+    )
     if audio_file:
         temp_dir = tempfile.gettempdir()
         st.session_state["audio_name"] = os.path.splitext(audio_file.name)[0]
@@ -98,60 +72,45 @@ if audio_source == "Arquivo Próprio":
 
         with open(audio_path, "wb") as f:
             f.write(audio_file.read())
-        st.success("Arquivo carregado!")
-
-        # Exibe a duração do áudio
-        minutes, seconds = get_audio_duration(audio_path)
-        st.info(f"Duração do áudio: {minutes} minutos e {seconds} segundos.")
+        st.success(f"Arquivo {audio_file.name} carregado com sucesso!")
 
         if st.button("Transcrever"):
             start_time = time.time()
             with st.spinner("Transcrevendo... Isso pode levar alguns minutos."):
-                st.session_state["transcription"] = transcribe_audio(audio_path, whisper_model, prompt=initial_prompt)
-            end_time = time.time()
-
-            total_time = end_time - start_time
-            st.success(f"Transcrição finalizada em {int(total_time // 60)} minutos e {int(total_time % 60)} segundos!")
-            os.remove(audio_path)
-
-# Baixar e transcrever do YouTube
-if audio_source == "YouTube":
-    st.session_state["youtube_url"] = st.text_input(
-        "Cole a URL do vídeo do YouTube:",
-        value=st.session_state["youtube_url"]
-    )
-
-    if st.button("Baixar e Transcrever"):
-        temp_dir = tempfile.gettempdir()
-        st.session_state["download_status"] = "Fazendo o download do áudio..."  # Mensagem inicial
-        st.info(st.session_state["download_status"])
-
-        # Download do áudio
-        with st.spinner("Baixando o áudio do YouTube... Aguarde."):
-            audio_path = download_yt_audio(st.session_state["youtube_url"], temp_dir)
-
-        if audio_path and os.path.exists(audio_path):
-            st.session_state["audio_name"] = os.path.splitext(os.path.basename(audio_path))[0]
-            st.session_state["download_status"] = "Download do áudio finalizado!"  # Mensagem final
-            st.success(st.session_state["download_status"])
-
-            # Exibe a duração do áudio
-            minutes, seconds = get_audio_duration(audio_path)
-            st.info(f"Duração do áudio: {minutes} minutos e {seconds} segundos.")
-
-            # Transcrição
-            start_time = time.time()
-            with st.spinner("Transcrevendo... Isso pode levar alguns minutos."):
-                st.session_state["transcription"] = transcribe_audio(audio_path, whisper_model, prompt=initial_prompt)
+                st.session_state["transcription"] = transcribe_audio(audio_path, prompt=initial_prompt)
             end_time = time.time()
 
             st.success(f"Transcrição finalizada em {int((end_time - start_time) // 60)} minutos e {int((end_time - start_time) % 60)} segundos!")
             os.remove(audio_path)
-        else:
-            st.session_state["download_status"] = "Falha no download do áudio. Verifique a URL."
-            st.error(st.session_state["download_status"])
 
-# Mostrar transcrição e botão de download
+# Transcrição de vídeos do YouTube
+if audio_source == "YouTube":
+    youtube_url = st.text_input("Cole a URL do vídeo do YouTube:")
+    st.warning(
+        "⚠️ Alguns vídeos do YouTube não permitem download e transcrição devido a restrições de direitos autorais."
+    )
+    if st.button("Baixar e Transcrever"):
+        if youtube_url:
+            temp_dir = tempfile.gettempdir()
+            st.info("Fazendo o download do áudio do YouTube...")
+            audio_path = download_yt_audio(youtube_url, temp_dir)
+
+            if audio_path and os.path.exists(audio_path):
+                st.success("Download do áudio finalizado!")
+                start_time = time.time()
+                with st.spinner("Transcrevendo... Isso pode levar alguns minutos."):
+                    st.session_state["transcription"] = transcribe_audio(audio_path, prompt=initial_prompt)
+                end_time = time.time()
+
+                st.session_state["audio_name"] = os.path.splitext(os.path.basename(audio_path))[0]
+                st.success(f"Transcrição finalizada em {int((end_time - start_time) // 60)} minutos e {int((end_time - start_time) % 60)} segundos!")
+                os.remove(audio_path)
+            else:
+                st.error("Falha no download do áudio. Verifique a URL.")
+        else:
+            st.error("Por favor, forneça uma URL válida do YouTube.")
+
+# Exibição da transcrição e botão de download
 if st.session_state["transcription"] and st.session_state["audio_name"]:
     st.text_area("Transcrição", st.session_state["transcription"], height=300)
     txt_filename = f"{st.session_state['audio_name']}.txt"
@@ -161,15 +120,8 @@ if st.session_state["transcription"] and st.session_state["audio_name"]:
         file_name=txt_filename,
         mime="text/plain"
     ):
-        # Limpa os estados após o download
-        st.session_state["transcription"] = None
-        st.session_state["audio_name"] = None
-        st.session_state["youtube_url"] = ""
-        st.session_state["reset_trigger"] = True
-
-        # Adiciona JavaScript para rolar ao topo
+        # Recarrega a página (reseta todos os inputs)
         st.markdown(
-            "<script>window.scrollTo(0, 0);</script>",
+            '<meta http-equiv="refresh" content="0;URL=https://transcricaodeaudio.streamlit.app/">',
             unsafe_allow_html=True
         )
-        st.rerun()
