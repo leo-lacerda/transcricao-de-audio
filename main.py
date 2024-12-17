@@ -23,7 +23,7 @@ if "youtube_url" not in st.session_state:
 st.write("### Sobre o áudio")
 audio_context_type = st.selectbox(
     "Qual o tipo de áudio?",
-    ["Geral", "Entrevista", "Aula ou palestra", "Música"],
+    ["Geral", "Entrevista", "Aula ou palestra"],
     key="audio_context_type",
     help="Selecione o tipo do áudio para fornecer ao sistema mais contexto."
 )
@@ -47,7 +47,6 @@ language = st.selectbox(
 default_prompts = {
     "Geral": "Este é um áudio geral.",
     "Entrevista": "Este é um áudio de uma entrevista entre duas ou mais pessoas.",
-    "Música": "Este é um áudio de uma música. A transcrição deve focar nas letras.",
     "Aula ou palestra": "Este é um áudio de uma aula ou palestra.",
 }
 initial_prompt = f"{default_prompts[audio_context_type]} Língua selecionada: {language}."
