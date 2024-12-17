@@ -8,8 +8,8 @@ from youtube_utils import download_yt_audio
 # Configuração da página
 st.set_page_config(page_title="Transcrição de Áudio", page_icon="🎧")
 st.title('Transcrição de Áudio')
-st.write('Transcreva áudios de vídeos do YouTube ou de arquivos de áudio próprios')
-st.info('Web app criado no [**Streamlit**](https://streamlit.io) por [**Leo Lacerda**](https://leolacerda.com.br)', icon="🤓")
+st.write('Pesquisadores: aqui vocês podem transcrever (gratuitamente) áudios de vídeos do YouTube ou de arquivos de áudio próprios de entrevistas')
+st.info('Web app criado no [**Streamlit**](https://streamlit.io) por [**Leo Lacerda**](https://linkedin.com/in/leolacerda)', icon="🤓")
 
 # Inicialização do estado da sessão
 if "transcription" not in st.session_state:
@@ -23,7 +23,7 @@ if "youtube_url" not in st.session_state:
 st.write("### Sobre o áudio")
 audio_context_type = st.selectbox(
     "Qual o tipo de áudio?",
-    ["Geral", "Entrevista", "Música", "Aula ou palestra"],
+    ["Geral", "Entrevista", "Aula ou palestra", "Música"],
     key="audio_context_type",
     help="Selecione o tipo do áudio para fornecer ao sistema mais contexto."
 )
@@ -38,9 +38,8 @@ context_description = st.text_area(
 # Língua do áudio
 language = st.selectbox(
     "Língua do áudio:",
-    ["Inglês (Geral)", "Inglês (US)", "Inglês (UK)", 
-     "Português (BR)", "Português (PT)", "Espanhol (ES)", 
-     "Espanhol (América Latina)", "Francês", "Alemão"],
+    ["Português (BR)", "Português (PT)", "Inglês",
+     "Espanhol", "Francês", "Alemão"],
     help="Selecione a língua predominante no áudio para melhorar a transcrição."
 )
 
